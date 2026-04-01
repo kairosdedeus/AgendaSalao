@@ -2,6 +2,7 @@
   "name": "@kairosdedeus/agenda-salao",
   "private": false,
   "version": "0.0.0",
+  "homepage": "https://kairosdedeus.github.io/AgendaSalao",
   "type": "module",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
@@ -9,8 +10,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint .",
     "preview": "vite preview",
+    "deploy": "npm run build",
+    "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest"
   },
