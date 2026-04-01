@@ -3,8 +3,8 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
-export default defineConfig({
-  base: '/AgendaSalao/',
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/AgendaSalao/' : '/',
   plugins: [
     react(),
     tailwindcss(),
@@ -15,4 +15,4 @@ export default defineConfig({
     setupFiles: './src/tests/setup.js',
     css: false,
   },
-})
+}))
