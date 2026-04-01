@@ -1,0 +1,304 @@
+import React, { useState, useEffect } from 'react';
+import { supabase } from './lib/supabase';
+import CalendarView from './components/CalendarView';
+import TimeSlotList from './components/TimeSlotList';
+import BookingForm from './components/BookingForm';
+import AppointmentsManager from './components/AppointmentsManager';
+import {
+  Users, LogOut, Sparkles,
+  ChevronDown, AlertCircle, Calendar as CalendarIcon,
+  ClipboardList, Loader2
+} from 'lucide-react';
+import Login from './components/Login';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// ---------------------------------------------------------------------------
+// ErrorBoundary — captura erros inesperados sem quebrar toda a aplicação
+// ---------------------------------------------------------------------------
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-10 flex flex-col items-center justify-center min-h-screen bg-red-50 text-red-900">
+          <AlertCircle className="w-16 h-16 mb-4" />
+          <h1 className="text-2xl font-black mb-2 font-display">Ops! Ocorreu um erro.</h1>
+          <p className="opacity-70 text-sm max-w-md text-center">{this.state.error?.message}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-8 px-8 py-4 bg-red-600 text-white rounded-2xl font-bold"
+          >
+            Recarregar
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// MainApp — núcleo da aplicação, exibido após autenticação
+// ---------------------------------------------------------------------------
+const MainApp = ({ onLogout }) => {
+  const [view, setView] = useState('calendar');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [professionals, setProfessionals] = useState([]);
+  const [selectedProfessionalId, setSelectedProfessionalId] = useState('');
+  const [showBookingForm, setShowBookingForm] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchProfessionals = async () => {
+      setLoading(true);
+      setError(null);
+
+      const { data, error: err } = await supabase
+        .from('profissionais')
+        .select('id, nome')
+        .order('nome');
+
+      if (err) {
+        setError('Não foi possível carregar os profissionais. Verifique a conexão com o banco.');
+        setLoading(false);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        setError('Nenhum profissional cadastrado. Execute o script SQL no Supabase para popular o banco.');
+        setLoading(false);
+        return;
+      }
+
+      setProfessionals(data);
+      setSelectedProfessionalId(data[0].id);
+      setLoading(false);
+    };
+
+    fetchProfessionals();
+  }, []);
+
+  const handleEdit = (appointment) => {
+    setEditingAppointment(appointment);
+    setShowBookingForm(true);
+  };
+
+  const handleSave = () => {
+    setShowBookingForm(false);
+    setEditingAppointment(null);
+    // Força re-render dos filhos via key (sem reload de página)
+    setSelectedDate(d => new Date(d));
+  };
+
+  // ---- Loading state ----
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#FBFBFF]">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
+        >
+          <Sparkles className="w-12 h-12 text-lavender-600" />
+        </motion.div>
+        <div className="mt-6 text-gray-400 font-display font-black uppercase tracking-[0.3em] text-[10px]">
+          Carregando Dados...
+        </div>
+      </div>
+    );
+  }
+
+  // ---- Error state ----
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#FBFBFF] p-8 text-center">
+        <AlertCircle className="w-16 h-16 text-red-400 mb-4" />
+        <h2 className="text-2xl font-black text-gray-900 font-display mb-2">Erro de Conexão</h2>
+        <p className="text-gray-500 max-w-sm mb-8">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-8 py-4 bg-gray-900 text-white rounded-2xl font-bold hover:bg-lavender-600 transition-all"
+        >
+          Tentar Novamente
+        </button>
+        <button
+          onClick={onLogout}
+          className="mt-4 text-sm text-gray-400 underline"
+        >
+          Sair
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#FBFBFF] p-4 pb-32 max-w-xl mx-auto selection:bg-lavender-200">
+      {/* Header */}
+      <header className="py-8 mb-4">
+        <div className="flex items-center justify-between mb-8 px-2">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="w-4 h-4 text-lavender-400" />
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Premium Management</div>
+            </div>
+            <h1 className="text-4xl font-black text-gray-900 font-display leading-none tracking-tight">
+              Agenda<span className="text-lavender-600">.</span>Ouro
+            </h1>
+          </div>
+          <button
+            onClick={onLogout}
+            className="w-12 h-12 glass flex items-center justify-center text-gray-400 hover:text-red-500 rounded-2xl transition-all active:scale-90"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Seletor de profissional — só visível na aba calendário */}
+        {view === 'calendar' && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass p-6 rounded-[2.5rem] border-lavender-100"
+          >
+            <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 mb-3 uppercase tracking-[0.2em]">
+              <Users className="w-3.5 h-3.5" />
+              Especialista Responsável
+            </div>
+            <div className="relative">
+              <select
+                className="w-full p-5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-lavender-500 outline-none text-gray-900 font-black appearance-none pr-12 transition-all cursor-pointer"
+                value={selectedProfessionalId}
+                onChange={(e) => setSelectedProfessionalId(e.target.value)}
+              >
+                {professionals.map((p) => (
+                  <option key={p.id} value={p.id}>{p.nome}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+            </div>
+          </motion.div>
+        )}
+      </header>
+
+      {/* Main content */}
+      <main>
+        <AnimatePresence mode="wait">
+          {view === 'calendar' ? (
+            <motion.div
+              key="calendar-view"
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.02 }}
+              className="space-y-10"
+            >
+              <CalendarView
+                selectedDate={selectedDate}
+                onDateSelect={setSelectedDate}
+                professionalId={selectedProfessionalId}
+              />
+              <TimeSlotList
+                selectedDate={selectedDate}
+                professionalId={selectedProfessionalId}
+                onAddBooking={() => { setEditingAppointment(null); setShowBookingForm(true); }}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="manager-view"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+            >
+              <AppointmentsManager onEdit={handleEdit} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm glass rounded-[2.5rem] p-2 flex items-center justify-between border-lavender-100 shadow-2xl z-50">
+        <button
+          onClick={() => setView('calendar')}
+          className={`flex-1 flex flex-col items-center py-3 rounded-[2rem] transition-all gap-1 ${view === 'calendar' ? 'bg-gray-900 text-white shadow-xl' : 'text-gray-400 hover:text-lavender-600'}`}
+        >
+          <CalendarIcon className="w-5 h-5" />
+          <span className="text-[10px] font-black uppercase tracking-widest">Início</span>
+        </button>
+        <button
+          onClick={() => setView('manager')}
+          className={`flex-1 flex flex-col items-center py-3 rounded-[2rem] transition-all gap-1 ${view === 'manager' ? 'bg-gray-900 text-white shadow-xl' : 'text-gray-400 hover:text-lavender-600'}`}
+        >
+          <ClipboardList className="w-5 h-5" />
+          <span className="text-[10px] font-black uppercase tracking-widest">Agenda</span>
+        </button>
+      </nav>
+
+      {/* Booking Form Modal */}
+      <AnimatePresence>
+        {showBookingForm && (
+          <BookingForm
+            selectedDate={selectedDate}
+            professionalId={selectedProfessionalId}
+            initialData={editingAppointment}
+            onClose={() => { setShowBookingForm(false); setEditingAppointment(null); }}
+            onSave={handleSave}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// App — gerencia autenticação via Supabase Auth
+// ---------------------------------------------------------------------------
+const App = () => {
+  const [session, setSession] = useState(null);
+  const [initializing, setInitializing] = useState(true);
+
+  useEffect(() => {
+    // onAuthStateChange dispara INITIAL_SESSION automaticamente no setup
+    // Isso substitui o getSession() e evita race conditions
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      console.log('[Auth]', event, s?.user?.email || 'sem sessão');
+      setSession(s);
+      setInitializing(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setSession(null);
+  };
+
+  if (initializing) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#FBFBFF]">
+        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}>
+          <Loader2 className="w-10 h-10 text-lavender-400" />
+        </motion.div>
+      </div>
+    );
+  }
+
+  return (
+    <ErrorBoundary>
+      {!session ? (
+        <Login />
+      ) : (
+        <MainApp onLogout={handleLogout} />
+      )}
+    </ErrorBoundary>
+  );
+};
+
+export default App;
