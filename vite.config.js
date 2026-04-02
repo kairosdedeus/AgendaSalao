@@ -9,6 +9,27 @@ export default defineConfig(({ command }) => ({
     react(),
     tailwindcss(),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'react-vendor';
+            }
+            if (id.includes('framer-motion') || id.includes('lucide-react')) {
+              return 'ui-vendor';
+            }
+            if (id.includes('date-fns') || id.includes('@supabase')) {
+              return 'utils-vendor';
+            }
+            return 'vendor';
+          }
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000
+  },
   test: {
     globals: true,
     environment: 'jsdom',
