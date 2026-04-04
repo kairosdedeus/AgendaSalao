@@ -35,42 +35,42 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FBFBFF] flex flex-col items-center justify-center p-6 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-lavender-100 via-white to-white">
+    <div className="min-h-screen bg-[#FBFBFF] flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-lavender-100 via-white to-white">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
+        className="w-full max-w-sm sm:max-w-md"
       >
-        <div className="bg-white rounded-[3rem] shadow-2xl p-10 border border-lavender-100 premium-shadow">
+        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-6 sm:p-8 md:p-10 border border-lavender-100 premium-shadow">
           {/* Brand */}
-          <div className="flex flex-col items-center mb-10">
+          <div className="flex flex-col items-center mb-8 sm:mb-10">
             <motion.div
               whileHover={{ rotate: 15 }}
-              className="p-5 bg-lavender-600 rounded-3xl shadow-xl shadow-lavender-200 mb-6"
+              className="p-3 sm:p-4 md:p-5 bg-lavender-600 rounded-2xl sm:rounded-3xl shadow-xl shadow-lavender-200 mb-4 sm:mb-6"
             >
-              <Sparkles className="w-10 h-10 text-white" />
+              <Sparkles className="w-8 sm:w-10 h-8 sm:h-10 text-white" />
             </motion.div>
-            <h1 className="text-4xl font-black text-gray-900 font-display tracking-tight mb-2">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 font-display tracking-tight mb-2">
               Agenda<span className="text-lavender-600">.</span>Studio
             </h1>
-            <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.3em]">Premium Management</p>
+            <p className="text-gray-400 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em]">Premium Management</p>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleLogin} className="space-y-4 sm:space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 ml-1 uppercase tracking-widest">
+              <label className="text-[9px] sm:text-[10px] font-black text-gray-400 ml-1 uppercase tracking-widest">
                 Acesso Restrito
               </label>
 
               {/* Email */}
               <div className="relative group">
-                <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300 group-focus-within:text-lavender-500 transition-colors" />
+                <Mail className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-gray-300 group-focus-within:text-lavender-500 transition-colors" />
                 <input
                   type="email"
                   required
                   placeholder="Seu e-mail profissional"
-                  className="w-full pl-14 pr-5 py-5 bg-gray-50 border-transparent rounded-[2rem] focus:ring-2 focus:ring-lavender-500 outline-none transition-all font-bold"
+                  className="w-full pl-12 sm:pl-14 pr-4 sm:pr-5 py-3 sm:py-4 md:py-5 bg-gray-50 border-transparent rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-lavender-500 outline-none transition-all font-bold text-sm"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -78,12 +78,12 @@ const Login = () => {
 
               {/* Senha */}
               <div className="relative group">
-                <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300 group-focus-within:text-lavender-500 transition-colors" />
+                <Lock className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-gray-300 group-focus-within:text-lavender-500 transition-colors" />
                 <input
                   type="password"
                   required
                   placeholder="Sua senha secreta"
-                  className="w-full pl-14 pr-5 py-5 bg-gray-50 border-transparent rounded-[2rem] focus:ring-2 focus:ring-lavender-500 outline-none transition-all font-bold"
+                  className="w-full pl-12 sm:pl-14 pr-4 sm:pr-5 py-3 sm:py-4 md:py-5 bg-gray-50 border-transparent rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-lavender-500 outline-none transition-all font-bold text-sm"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -95,7 +95,7 @@ const Login = () => {
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="p-4 bg-red-50 text-red-600 text-xs font-bold rounded-2xl border border-red-100 flex items-center gap-3"
+                className="p-3 sm:p-4 bg-red-50 text-red-600 text-[11px] sm:text-xs font-bold rounded-xl sm:rounded-2xl border border-red-100 flex items-center gap-3"
               >
                 <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
                 {error}
@@ -107,26 +107,26 @@ const Login = () => {
               type="submit"
               disabled={loading}
               className={`
-                w-full py-5 bg-gray-900 text-white rounded-[2rem] font-black text-lg shadow-2xl shadow-gray-200
+                w-full py-3 sm:py-4 md:py-5 bg-gray-900 text-white rounded-xl sm:rounded-2xl font-black text-sm sm:text-base shadow-2xl shadow-gray-200
                 flex items-center justify-center gap-2 hover:bg-lavender-600 transition-all active:scale-95
                 ${loading ? 'opacity-70 cursor-not-allowed' : ''}
               `}
             >
               {loading ? (
-                <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-5 h-5 border-4 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  <LogIn className="w-5 h-5" />
+                  <LogIn className="w-4 sm:w-5 h-4 sm:h-5" />
                   Entrar no Sistema
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-10 text-center text-gray-300 text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2">
-            <div className="w-8 h-[1px] bg-gray-100" />
-            Exclusivo Gold Team
-            <div className="w-8 h-[1px] bg-gray-100" />
+          <div className="mt-6 sm:mt-10 text-center text-gray-300 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] flex items-center justify-center gap-2">
+            <div className="flex-grow h-[1px] bg-gray-100" />
+            <span className="flex-shrink-0">Exclusivo Gold Team</span>
+            <div className="flex-grow h-[1px] bg-gray-100" />
           </div>
         </div>
       </motion.div>

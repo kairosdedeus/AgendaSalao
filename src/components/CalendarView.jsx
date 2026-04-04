@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  format, 
-  addMonths, 
-  subMonths, 
-  startOfMonth, 
-  endOfMonth, 
-  startOfWeek, 
-  endOfWeek, 
-  isSameMonth, 
-  isSameDay, 
-  addDays, 
-  isBefore, 
+import {
+  format,
+  addMonths,
+  subMonths,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  isSameMonth,
+  isSameDay,
+  addDays,
+  isBefore,
   startOfDay,
   parseISO
 } from 'date-fns';
@@ -18,62 +18,60 @@ import { ptBR } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRealtimeAppointments } from '../hooks/useRealtime';
 
 const CalendarView = ({ selectedDate, onDateSelect, professionalId }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // Usar hook de real-time para agendamentos
+  const { appointments: allAppointments } = useRealtimeAppointments();
+
+  // Filtrar agendamentos do mês atual para marcadores
   const [appointments, setAppointments] = useState([]);
 
   useEffect(() => {
-    const fetchAppointments = async () => {
-      if (!professionalId) return;
+    if (!professionalId) {
+      setAppointments([]);
+      return;
+    }
 
-      try {
-        const firstDay = startOfMonth(currentMonth);
-        const lastDay = endOfMonth(currentMonth);
+    const firstDay = startOfMonth(currentMonth);
+    const lastDay = endOfMonth(currentMonth);
 
-        const { data, error } = await supabase
-          .from('agendamentos')
-          .select('data_hora')
-          .eq('profissional_id', professionalId)
-          .gte('data_hora', firstDay.toISOString())
-          .lte('data_hora', lastDay.toISOString());
-
-        if (error) {
-          console.error('CalendarView: falha ao buscar marcadores:', error.message);
-          setAppointments([]);
-          return;
-        }
-        setAppointments(data || []);
-      } catch (err) {
-        console.error('CalendarView: erro inesperado:', err.message);
-        setAppointments([]);
+    const filtered = (allAppointments || []).filter(appointment => {
+      // Filtrar por profissional se especificado
+      if (professionalId && appointment.profissional_id !== professionalId) {
+        return false;
       }
-    };
 
-    fetchAppointments();
-  }, [currentMonth, professionalId]);
+      const appointmentDate = new Date(appointment.data_hora);
+      return appointmentDate >= firstDay && appointmentDate <= lastDay;
+    });
+
+    setAppointments(filtered);
+  }, [currentMonth, professionalId, allAppointments]);
 
   const renderHeader = () => {
     return (
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8 gap-4">
         <div className="flex flex-col">
-          <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1 ml-1 opacity-50">Calendário</span>
-          <h2 className="text-2xl font-black text-gray-900 font-display capitalize">
+          <span className="text-gray-400 text-[8px] sm:text-xs font-black uppercase tracking-widest mb-1 ml-1 opacity-50">Calendário</span>
+          <h2 className="text-lg sm:text-xl md:text-2xl font-black text-gray-900 font-display capitalize">
             {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
           </h2>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 self-start sm:self-auto">
           <button 
             onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-            className="p-3 hover:bg-white hover:shadow-xl rounded-2xl transition-all active:scale-90 border border-transparent hover:border-gray-100 group"
+            className="p-2 sm:p-3 hover:bg-white hover:shadow-xl rounded-lg sm:rounded-2xl transition-all active:scale-90 border border-transparent hover:border-gray-100 group"
           >
-            <ChevronLeft className="w-6 h-6 text-gray-400 group-hover:text-lavender-600 transition-colors" />
+            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400 group-hover:text-lavender-600 transition-colors" />
           </button>
           <button 
             onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-            className="p-3 hover:bg-white hover:shadow-xl rounded-2xl transition-all active:scale-90 border border-transparent hover:border-gray-100 group"
+            className="p-2 sm:p-3 hover:bg-white hover:shadow-xl rounded-lg sm:rounded-2xl transition-all active:scale-90 border border-transparent hover:border-gray-100 group"
           >
-            <ChevronRight className="w-6 h-6 text-gray-400 group-hover:text-lavender-600 transition-colors" />
+            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400 group-hover:text-lavender-600 transition-colors" />
           </button>
         </div>
       </div>
@@ -83,9 +81,9 @@ const CalendarView = ({ selectedDate, onDateSelect, professionalId }) => {
   const renderDays = () => {
     const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
     return (
-      <div className="grid grid-cols-7 mb-4">
+      <div className="grid grid-cols-7 mb-2 sm:mb-4 gap-0.5">
         {days.map((day) => (
-          <div key={day} className="text-center text-[10px] font-black text-gray-300 uppercase tracking-widest">
+          <div key={day} className="text-center text-[7px] sm:text-xs font-black text-gray-300 uppercase tracking-widest py-2">
             {day}
           </div>
         ))}
@@ -121,39 +119,39 @@ const CalendarView = ({ selectedDate, onDateSelect, professionalId }) => {
             key={d.toString()}
             whileTap={!isPast ? { scale: 0.9 } : {}}
             className={`
-              relative h-14 flex items-center justify-center cursor-pointer transition-all duration-300
+              relative h-10 sm:h-12 md:h-14 flex items-center justify-center cursor-pointer transition-all duration-300 rounded-lg sm:rounded-2xl
               ${!isCurrentMonth ? 'text-gray-200' : ''}
-              ${isPast ? 'cursor-not-allowed opacity-30 text-gray-400' : 'hover:bg-lavender-50 rounded-2xl'}
-              ${isSelected ? 'bg-lavender-600 text-white shadow-xl shadow-lavender-200 z-10 rounded-2xl' : ''}
-              ${!isPast && hasAppointment && !isSelected ? 'ring-2 ring-lavender-400 ring-opacity-50 rounded-2xl' : ''}
+              ${isPast ? 'cursor-not-allowed opacity-30 text-gray-400' : 'hover:bg-lavender-50'}
+              ${isSelected ? 'bg-lavender-600 text-white shadow-xl shadow-lavender-200 z-10' : ''}
+              ${!isPast && hasAppointment && !isSelected ? 'ring-2 ring-lavender-400 ring-opacity-50' : ''}
             `}
             onClick={() => !isPast && onDateSelect(d)}
           >
             {isSelected && (
               <motion.div 
                 layoutId="calendar-selection"
-                className="absolute inset-0 bg-lavender-600 rounded-2xl"
+                className="absolute inset-0 bg-lavender-600 rounded-lg sm:rounded-2xl"
                 transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
               />
             )}
-            <span className="relative z-20 font-bold text-sm">
+            <span className="relative z-20 font-bold text-xs sm:text-sm md:text-base">
               {format(d, 'd')}
             </span>
             {!isPast && hasAppointment && (
-              <div className="absolute -bottom-1 flex gap-0.5 z-20">
+              <div className="absolute -bottom-0.5 sm:-bottom-1 flex gap-0.5 sm:gap-1 z-20">
                 <div className={`
-                  w-2 h-2 rounded-full
+                  w-1 h-1 sm:w-2 sm:h-2 rounded-full
                   ${isSelected ? 'bg-white' : 'bg-lavender-500'}
                   shadow-sm
                 `} />
                 <div className={`
-                  w-2 h-2 rounded-full
+                  w-1 h-1 sm:w-2 sm:h-2 rounded-full
                   ${isSelected ? 'bg-white opacity-60' : 'bg-lavender-400 opacity-60'}
                 `} />
               </div>
             )}
             {isSameDay(d, today) && !isSelected && (
-              <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-400 rounded-full z-20 shadow-sm" />
+              <div className="absolute top-1 sm:top-2 right-1 sm:right-2 w-1 h-1 sm:w-1.5 sm:h-1.5 bg-red-400 rounded-full z-20 shadow-sm" />
             )}
           </motion.div>
         );
@@ -170,7 +168,7 @@ const CalendarView = ({ selectedDate, onDateSelect, professionalId }) => {
   };
 
   return (
-    <div className="bg-white/50 backdrop-blur-md p-6 rounded-[2.5rem] border border-white premium-shadow">
+    <div className="bg-white/50 backdrop-blur-md p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl md:rounded-[2.5rem] border border-white premium-shadow">
       {renderHeader()}
       {renderDays()}
       {renderCells()}

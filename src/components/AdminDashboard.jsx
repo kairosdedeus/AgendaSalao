@@ -5,12 +5,10 @@ import {
   X, Check, AlertCircle, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRealtimeServices, useRealtimeProfessionals } from '../hooks/useRealtime';
 
 const AdminDashboard = ({ onClose }) => {
   const [activeTab, setActiveTab] = useState('services');
-  const [services, setServices] = useState([]);
-  const [professionals, setProfessionals] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [editingService, setEditingService] = useState(null);
   const [editingProfessional, setEditingProfessional] = useState(null);
   const [showAddService, setShowAddService] = useState(false);
@@ -28,29 +26,11 @@ const AdminDashboard = ({ onClose }) => {
     foto_url: ''
   });
 
-  // Load data
-  useEffect(() => {
-    loadData();
-  }, []);
+  // Usar hooks de real-time
+  const { services, loading: servicesLoading, refetch: refetchServices } = useRealtimeServices();
+  const { professionals, loading: professionalsLoading, refetch: refetchProfessionals } = useRealtimeProfessionals();
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [servicesRes, professionalsRes] = await Promise.all([
-        supabase.from('servicos').select('*').order('categoria'),
-        supabase.from('profissionais').select('*').order('nome')
-      ]);
-
-      if (servicesRes.error) throw servicesRes.error;
-      if (professionalsRes.error) throw professionalsRes.error;
-
-      setServices(servicesRes.data || []);
-      setProfessionals(professionalsRes.data || []);
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-    }
-    setLoading(false);
-  };
+  const loading = servicesLoading || professionalsLoading;
 
   // Service CRUD
   const handleAddService = async () => {
@@ -69,7 +49,7 @@ const AdminDashboard = ({ onClose }) => {
 
       setServiceForm({ descricao: '', categoria: '', preco: '' });
       setShowAddService(false);
-      loadData();
+      // Dados serão atualizados automaticamente via real-time
     } catch (error) {
       console.error('Erro ao adicionar serviço:', error);
     }
@@ -92,7 +72,7 @@ const AdminDashboard = ({ onClose }) => {
 
       setEditingService(null);
       setServiceForm({ descricao: '', categoria: '', preco: '' });
-      loadData();
+      // Dados serão atualizados automaticamente via real-time
     } catch (error) {
       console.error('Erro ao editar serviço:', error);
     }
@@ -108,7 +88,7 @@ const AdminDashboard = ({ onClose }) => {
         .eq('id', id);
 
       if (error) throw error;
-      loadData();
+      // Dados serão atualizados automaticamente via real-time
     } catch (error) {
       console.error('Erro ao excluir serviço:', error);
     }
@@ -130,7 +110,7 @@ const AdminDashboard = ({ onClose }) => {
 
       setProfessionalForm({ nome: '', foto_url: '' });
       setShowAddProfessional(false);
-      loadData();
+      // Dados serão atualizados automaticamente via real-time
     } catch (error) {
       console.error('Erro ao adicionar profissional:', error);
     }
@@ -152,7 +132,7 @@ const AdminDashboard = ({ onClose }) => {
 
       setEditingProfessional(null);
       setProfessionalForm({ nome: '', foto_url: '' });
-      loadData();
+      // Dados serão atualizados automaticamente via real-time
     } catch (error) {
       console.error('Erro ao editar profissional:', error);
     }
@@ -168,7 +148,7 @@ const AdminDashboard = ({ onClose }) => {
         .eq('id', id);
 
       if (error) throw error;
-      loadData();
+      // Dados serão atualizados automaticamente via real-time
     } catch (error) {
       console.error('Erro ao excluir profissional:', error);
     }
@@ -194,8 +174,8 @@ const AdminDashboard = ({ onClose }) => {
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-[3rem] p-8">
-          <Loader2 className="w-8 h-8 animate-spin text-lavender-600" />
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8">
+          <Loader2 className="w-7 h-7 sm:w-8 sm:h-8 animate-spin text-lavender-600" />
         </div>
       </div>
     );
@@ -213,11 +193,11 @@ const AdminDashboard = ({ onClose }) => {
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white rounded-[3rem] w-full max-w-4xl max-h-[90vh] overflow-hidden"
+          className="bg-white rounded-2xl sm:rounded-3xl md:rounded-[3rem] w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-4xl max-h-[90vh] md:max-h-[85vh] overflow-hidden"
         >
           {/* Header */}
-          <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="p-4 sm:p-6 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
               <Settings className="w-6 h-6 text-lavender-600" />
               <h2 className="text-2xl font-black text-gray-900">Dashboard Administrativo</h2>
             </div>
@@ -230,24 +210,24 @@ const AdminDashboard = ({ onClose }) => {
           </div>
 
           {/* Tabs */}
-          <div className="flex border-b border-gray-100">
+          <div className="flex border-b border-gray-100 overflow-x-auto">
             <button
               onClick={() => setActiveTab('services')}
-              className={`flex-1 py-4 px-6 text-center font-bold transition-colors ${
+              className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 text-center font-bold transition-colors min-w-0 ${
                 activeTab === 'services' ? 'text-lavender-600 border-b-2 border-lavender-600' : 'text-gray-400'
               }`}
             >
-              <Scissors className="w-5 h-5 mx-auto mb-1" />
-              Serviços
+              <Scissors className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1 flex-shrink-0" />
+              <span className="text-[10px] sm:text-xs hidden sm:block">Serviços</span>
             </button>
             <button
               onClick={() => setActiveTab('professionals')}
-              className={`flex-1 py-4 px-6 text-center font-bold transition-colors ${
+              className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 text-center font-bold transition-colors min-w-0 ${
                 activeTab === 'professionals' ? 'text-lavender-600 border-b-2 border-lavender-600' : 'text-gray-400'
               }`}
             >
-              <Users className="w-5 h-5 mx-auto mb-1" />
-              Profissionais
+              <Users className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1 flex-shrink-0" />
+              <span className="text-[10px] sm:text-xs hidden sm:block">Profissionais</span>
             </button>
           </div>
 
@@ -266,25 +246,25 @@ const AdminDashboard = ({ onClose }) => {
                   </button>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 sm:space-y-3">
                   {services.map((service) => (
-                    <div key={service.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-                      <div>
-                        <p className="font-bold text-gray-900">{service.descricao}</p>
-                        <p className="text-sm text-gray-500">{service.categoria} • R$ {service.preco.toFixed(2)}</p>
+                    <div key={service.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-2xl gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-gray-900 text-sm sm:text-base truncate">{service.descricao}</p>
+                        <p className="text-xs sm:text-sm text-gray-500">{service.categoria} • R$ {service.preco.toFixed(2)}</p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 self-end sm:self-auto">
                         <button
                           onClick={() => startEditService(service)}
-                          className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center transition-colors"
+                          className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center transition-colors"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteService(service.id)}
-                          className="w-8 h-8 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 flex items-center justify-center transition-colors"
+                          className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 flex items-center justify-center transition-colors"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                         </button>
                       </div>
                     </div>

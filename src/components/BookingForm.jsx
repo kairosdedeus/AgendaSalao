@@ -20,6 +20,8 @@ const BookingForm = ({ selectedDate, professionalId, onClose, onSave, initialDat
   const [submitError, setSubmitError] = useState(null);
   const [services, setServices] = useState([]);
   const [servicesLoading, setServicesLoading] = useState(true);
+  const [professionals, setProfessionals] = useState([]);
+  const [professionalsLoading, setProfessionalsLoading] = useState(true);
 
   const [formData, setFormData] = useState({
     cliente_nome: initialData?.cliente_nome || '',
@@ -28,39 +30,46 @@ const BookingForm = ({ selectedDate, professionalId, onClose, onSave, initialDat
     servico_id: initialData?.servico_id || '',
     data_hora: initialData?.data_hora || '',
     observacoes: initialData?.observacoes || '',
+    profissional_id: initialData?.profissional_id || professionalId,
   });
 
   const isEditing = !!initialData;
 
-  // Buscar serviços do banco
+  // Buscar serviços e profissionais do banco
   useEffect(() => {
-    const fetchServices = async () => {
+    const fetchData = async () => {
       setServicesLoading(true);
-      const { data, error } = await supabase
-        .from('servicos')
-        .select('*')
-        .order('categoria');
+      setProfessionalsLoading(true);
 
-      if (error) {
-        console.error('Erro ao buscar serviços:', error);
-        setServicesLoading(false);
-        return;
+      const [servicesRes, professionalsRes] = await Promise.all([
+        supabase.from('servicos').select('*').order('categoria'),
+        supabase.from('profissionais').select('id, nome').order('nome')
+      ]);
+
+      if (servicesRes.error) {
+        console.error('Erro ao buscar serviços:', servicesRes.error);
+      } else {
+        setServices(servicesRes.data || []);
+        if (!isEditing && servicesRes.data && servicesRes.data.length > 0) {
+          setFormData(prev => ({ 
+            ...prev, 
+            servico: servicesRes.data[0].descricao,
+            servico_id: servicesRes.data[0].id
+          }));
+        }
       }
 
-      setServices(data || []);
+      if (professionalsRes.error) {
+        console.error('Erro ao buscar profissionais:', professionalsRes.error);
+      } else {
+        setProfessionals(professionalsRes.data || []);
+      }
+
       setServicesLoading(false);
-
-      // Definir serviço padrão se não estiver editando
-      if (!isEditing && data && data.length > 0) {
-        setFormData(prev => ({ 
-          ...prev, 
-          servico: data[0].descricao,
-          servico_id: data[0].id
-        }));
-      }
+      setProfessionalsLoading(false);
     };
 
-    fetchServices();
+    fetchData();
   }, [isEditing]);
 
   // ---------------------------------------------------------------------------
@@ -68,7 +77,7 @@ const BookingForm = ({ selectedDate, professionalId, onClose, onSave, initialDat
   // ---------------------------------------------------------------------------
   useEffect(() => {
     const fetchSlots = async () => {
-      if (!selectedDate || !professionalId) return;
+      if (!selectedDate || !formData.profissional_id) return;
       setSlotsLoading(true);
 
       const start = startOfDay(selectedDate);
@@ -77,7 +86,7 @@ const BookingForm = ({ selectedDate, professionalId, onClose, onSave, initialDat
       const { data, error } = await supabase
         .from('agendamentos')
         .select('data_hora')
-        .eq('profissional_id', professionalId)
+        .eq('profissional_id', formData.profissional_id)
         .gte('data_hora', start.toISOString())
         .lte('data_hora', end.toISOString());
 
@@ -105,7 +114,7 @@ const BookingForm = ({ selectedDate, professionalId, onClose, onSave, initialDat
     };
 
     fetchSlots();
-  }, [selectedDate, professionalId]);
+  }, [selectedDate, formData.profissional_id]);
 
   // ---------------------------------------------------------------------------
   // Máscara de WhatsApp: (XX) XXXXX-XXXX
@@ -131,7 +140,7 @@ const BookingForm = ({ selectedDate, professionalId, onClose, onSave, initialDat
       cliente_telefone: formData.cliente_telefone,
       servico: formData.servico,
       servico_id: formData.servico_id,
-      profissional_id: professionalId,
+      profissional_id: formData.profissional_id,
       observacoes: formData.observacoes,
     };
 
@@ -170,13 +179,13 @@ const BookingForm = ({ selectedDate, professionalId, onClose, onSave, initialDat
   // Steps
   // ---------------------------------------------------------------------------
   const renderStep1 = () => (
-    <motion.div key="s1" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-3">
+    <motion.div key="s1" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-2 sm:space-y-3">
       {servicesLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-8 h-8 border-4 border-lavender-200 border-t-lavender-600 rounded-full animate-spin" />
+        <div className="flex justify-center py-8 sm:py-12">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 border-4 border-lavender-200 border-t-lavender-600 rounded-full animate-spin" />
         </div>
       ) : services.length === 0 ? (
-        <div className="text-center py-10 text-gray-400 font-bold">
+        <div className="text-center py-8 sm:py-10 text-gray-400 font-bold text-sm">
           Nenhum serviço disponível.
         </div>
       ) : (
@@ -192,22 +201,24 @@ const BookingForm = ({ selectedDate, professionalId, onClose, onSave, initialDat
               setStep(2); 
             }}
             className={`
-              w-full p-4 rounded-3xl border-2 transition-all flex items-center justify-between group
+              w-full p-3 sm:p-4 rounded-lg sm:rounded-2xl md:rounded-3xl border-2 transition-all flex items-center justify-between group
               ${formData.servico === s.descricao ? 'border-lavender-600 bg-lavender-50' : 'border-gray-100 hover:border-lavender-200 bg-white'}
             `}
           >
-            <div className="flex items-center gap-4">
-              <div className={`p-3 rounded-2xl transition-colors ${formData.servico === s.descricao ? 'bg-lavender-600 text-white' : 'bg-gray-50 text-gray-400 group-hover:bg-lavender-100'}`}>
-                {getServiceIcon(s.categoria)}
+            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+              <div className={`p-2 sm:p-3 rounded-lg sm:rounded-2xl transition-colors flex-shrink-0 ${formData.servico === s.descricao ? 'bg-lavender-600 text-white' : 'bg-gray-50 text-gray-400 group-hover:bg-lavender-100'}`}>
+                <div className="w-4 h-4 sm:w-5 sm:h-5">
+                  {getServiceIcon(s.categoria)}
+                </div>
               </div>
-              <div className="text-left">
-                <p className="text-[10px] font-black uppercase tracking-widest text-lavender-400 mb-0.5">{s.categoria}</p>
-                <p className="font-bold text-gray-800">{s.descricao}</p>
+              <div className="text-left flex-1 min-w-0">
+                <p className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-lavender-400 mb-0.5">{s.categoria}</p>
+                <p className="font-bold text-gray-800 text-sm truncate">{s.descricao}</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="font-black text-lavender-600">R$ {s.preco.toFixed(2)}</p>
-              <ChevronRight className="w-4 h-4 text-gray-300 ml-auto" />
+            <div className="text-right ml-2 flex-shrink-0">
+              <p className="font-black text-lavender-600 text-sm sm:text-base">R$ {s.preco.toFixed(2)}</p>
+              <ChevronRight className="w-3 sm:w-4 h-3 sm:h-4 text-gray-300 ml-auto hidden sm:block" />
             </div>
           </button>
         ))
@@ -216,23 +227,23 @@ const BookingForm = ({ selectedDate, professionalId, onClose, onSave, initialDat
   );
 
   const renderStep2 = () => (
-    <motion.div key="s2" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-4">
+    <motion.div key="s2" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-3 sm:space-y-4">
       {slotsLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-8 h-8 border-4 border-lavender-200 border-t-lavender-600 rounded-full animate-spin" />
+        <div className="flex justify-center py-8 sm:py-12">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 border-4 border-lavender-200 border-t-lavender-600 rounded-full animate-spin" />
         </div>
       ) : availableSlots.length === 0 ? (
-        <div className="text-center py-10 text-gray-400 font-bold">
+        <div className="text-center py-8 sm:py-10 text-gray-400 font-bold text-sm">
           Não há horários disponíveis para este dia.
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3">
           {availableSlots.map(slot => (
             <button
               key={slot.toISOString()}
               onClick={() => { setFormData(f => ({ ...f, data_hora: slot.toISOString() })); setStep(3); }}
               className={`
-                py-4 rounded-2xl font-black text-sm transition-all
+                py-3 sm:py-4 rounded-lg sm:rounded-2xl font-black text-xs sm:text-sm transition-all
                 ${formData.data_hora === slot.toISOString()
                   ? 'bg-lavender-600 text-white shadow-xl shadow-lavender-200'
                   : 'bg-gray-50 text-gray-500 hover:bg-lavender-50'}
@@ -247,15 +258,15 @@ const BookingForm = ({ selectedDate, professionalId, onClose, onSave, initialDat
   );
 
   const renderStep3 = () => (
-    <motion.div key="s3" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-5">
-      <div className="space-y-4">
+    <motion.div key="s3" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-4 sm:space-y-5">
+      <div className="space-y-3 sm:space-y-4">
         {/* Nome */}
         <div className="relative">
-          <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300" />
+          <User className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-gray-300 flex-shrink-0" />
           <input
             type="text"
             placeholder="Nome da Cliente"
-            className="w-full pl-12 pr-4 py-5 bg-gray-50 rounded-2xl focus:ring-2 focus:ring-lavender-500 outline-none font-bold"
+            className="w-full pl-11 sm:pl-12 pr-4 py-3 sm:py-4 md:py-5 bg-gray-50 rounded-lg sm:rounded-2xl focus:ring-2 focus:ring-lavender-500 outline-none font-bold text-sm"
             value={formData.cliente_nome}
             onChange={e => setFormData(f => ({ ...f, cliente_nome: e.target.value }))}
           />
@@ -263,11 +274,11 @@ const BookingForm = ({ selectedDate, professionalId, onClose, onSave, initialDat
 
         {/* WhatsApp com máscara */}
         <div className="relative">
-          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300" />
+          <Phone className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-gray-300 flex-shrink-0" />
           <input
             type="tel"
             placeholder="WhatsApp (DD) 00000-0000"
-            className="w-full pl-12 pr-4 py-5 bg-gray-50 rounded-2xl focus:ring-2 focus:ring-lavender-500 outline-none font-bold"
+            className="w-full pl-11 sm:pl-12 pr-4 py-3 sm:py-4 md:py-5 bg-gray-50 rounded-lg sm:rounded-2xl focus:ring-2 focus:ring-lavender-500 outline-none font-bold text-sm"
             value={formData.cliente_telefone}
             onChange={e => setFormData(f => ({ ...f, cliente_telefone: formatWhatsApp(e.target.value) }))}
           />
@@ -277,10 +288,34 @@ const BookingForm = ({ selectedDate, professionalId, onClose, onSave, initialDat
         <textarea
           placeholder="Observações (opcional)"
           rows={3}
-          className="w-full p-5 bg-gray-50 rounded-2xl focus:ring-2 focus:ring-lavender-500 outline-none font-bold resize-none"
+          className="w-full p-3 sm:p-4 md:p-5 bg-gray-50 rounded-lg sm:rounded-2xl focus:ring-2 focus:ring-lavender-500 outline-none font-bold resize-none text-sm"
           value={formData.observacoes}
           onChange={e => setFormData(f => ({ ...f, observacoes: e.target.value }))}
         />
+
+        {/* Seletor de Profissional (apenas ao editar) */}
+        {isEditing && !professionalsLoading && professionals.length > 0 && (
+          <div>
+            <label className="text-[9px] sm:text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2 block">
+              Trocar Profissional
+            </label>
+            <div className="space-y-2">
+              {professionals.map((prof) => (
+                <button
+                  key={prof.id}
+                  onClick={() => setFormData(f => ({ ...f, profissional_id: prof.id }))}
+                  className={`w-full text-left p-3 sm:p-4 rounded-lg sm:rounded-2xl border-2 font-bold transition-all text-sm ${
+                    formData.profissional_id === prof.id
+                      ? 'border-lavender-600 bg-lavender-50 text-gray-900'
+                      : 'border-gray-100 bg-white text-gray-600 hover:border-lavender-200'
+                  }`}
+                >
+                  {prof.nome}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Resumo */}
@@ -296,6 +331,14 @@ const BookingForm = ({ selectedDate, professionalId, onClose, onSave, initialDat
           <div className="p-2 bg-lavender-600 rounded-lg text-white"><ShoppingBag className="w-4 h-4" /></div>
           <span className="font-bold text-gray-800 text-sm">{formData.servico}</span>
         </div>
+        {formData.profissional_id && professionals.length > 0 && (
+          <div className="flex items-center gap-3 pt-2 border-t border-lavender-200">
+            <div className="p-2 bg-lavender-600 rounded-lg text-white"><User className="w-4 h-4" /></div>
+            <span className="font-bold text-gray-800 text-sm">
+              {professionals.find(p => p.id === formData.profissional_id)?.nome || '—'}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Erro de submit */}
@@ -324,41 +367,41 @@ const BookingForm = ({ selectedDate, professionalId, onClose, onSave, initialDat
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
-        className="bg-white w-full max-w-xl rounded-t-[3rem] sm:rounded-[3rem] shadow-2xl overflow-hidden max-h-[92vh] flex flex-col relative"
+        className="bg-white w-full max-w-xs sm:max-w-md md:max-w-lg lg:max-w-xl rounded-t-2xl sm:rounded-t-3xl md:rounded-[3rem] md:rounded-b-[3rem] shadow-2xl overflow-hidden max-h-[92vh] md:max-h-[90vh] flex flex-col relative"
       >
         {/* Tela de sucesso */}
         {success && (
-          <div className="absolute inset-0 z-[110] bg-white/97 flex flex-col items-center justify-center p-10 text-center">
-            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }} className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-6">
-              <Check className="w-12 h-12 text-green-600" />
+          <div className="absolute inset-0 z-[110] bg-white/97 flex flex-col items-center justify-center p-6 sm:p-10 text-center">
+            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }} className="w-16 h-16 sm:w-24 sm:h-24 bg-green-100 rounded-full flex items-center justify-center mb-4 sm:mb-6">
+              <Check className="w-8 h-8 sm:w-12 sm:h-12 text-green-600" />
             </motion.div>
-            <h2 className="text-3xl font-black text-gray-900 mb-2 font-display">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 mb-1 sm:mb-2 font-display">
               {isEditing ? 'Atualizado!' : 'Confirmado!'}
             </h2>
-            <p className="text-gray-400 font-medium">Agendamento salvo com sucesso.</p>
+            <p className="text-gray-400 font-medium text-sm">Agendamento salvo com sucesso.</p>
           </div>
         )}
 
-        <div className="p-6 sm:p-9 overflow-y-auto">
+        <div className="p-4 sm:p-6 md:p-8 lg:p-9 overflow-y-auto">
           {/* Header do modal */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
+          <div className="flex items-start sm:items-center justify-between gap-3 mb-6 sm:mb-8">
+            <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
               {step > 1 && (
-                <button onClick={() => setStep(s => s - 1)} className="p-3 bg-gray-50 rounded-2xl text-gray-400 hover:text-lavender-600 transition-all">
-                  <ChevronLeft className="w-6 h-6" />
+                <button onClick={() => setStep(s => s - 1)} className="p-2 sm:p-3 bg-gray-50 rounded-lg sm:rounded-2xl text-gray-400 hover:text-lavender-600 transition-all flex-shrink-0">
+                  <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
               )}
-              <div>
-                <h2 className="text-2xl font-black text-gray-900 font-display">
+              <div className="min-w-0">
+                <h2 className="text-lg sm:text-xl md:text-2xl font-black text-gray-900 font-display truncate">
                   {isEditing ? 'Editar Agendamento' : stepTitles[step - 1]}
                 </h2>
-                <p className="text-lavender-400 text-[10px] font-black uppercase tracking-[0.2em] mt-0.5">
+                <p className="text-lavender-400 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] mt-0.5">
                   Passo {step} de 3
                 </p>
               </div>
             </div>
-            <button onClick={onClose} className="p-3 bg-gray-50 rounded-2xl text-gray-400 hover:text-red-500 transition-all">
-              <X className="w-6 h-6" />
+            <button onClick={onClose} className="p-2 sm:p-3 bg-gray-50 rounded-lg sm:rounded-2xl text-gray-400 hover:text-red-500 transition-all flex-shrink-0">
+              <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           </div>
 
