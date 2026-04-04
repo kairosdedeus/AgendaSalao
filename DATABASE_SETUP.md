@@ -1,16 +1,38 @@
 # 🛠 Supabase Database Setup Guide
 
-Este documento contém o script SQL completo para configurar o backend do **Agenda.Ouro**. Como DevOPS Senior, estruturei este script para garantir integridade referencial, segurança via RLS (Row Level Security) e performance.
+> ⚠️ **ATENÇÃO:** Este documento é mantido por referência histórica. Para novas migrações, use o arquivo **MIGRATION_INIT.sql** que contém toda a estrutura completa e atualizada.
 
-## 📋 Como aplicar
-1. Acesse o seu [Dashboard do Supabase](https://app.supabase.com/).
-2. Vá em **SQL Editor** no menu lateral.
-3. Clique em **New Query**.
-4. Cole o script abaixo e clique em **Run**.
+## 📚 Arquivos Recomendados
+
+Para uma **migração completa e moderna**, use:
+
+1. **[MIGRATION_INIT.sql](MIGRATION_INIT.sql)** ⭐ **RECOMENDADO**
+   - Script SQL completo
+   - Todas as tabelas, índices e dados iniciais
+   - Idempotente (seguro executar múltiplas vezes)
+   - Versão 1.2 (2026-04-03)
+
+2. **[CLASSES.md](CLASSES.md)**
+   - Documentação detalhada de todas as tabelas
+   - Estrutura de dados
+   - Relacionamentos (ER Diagram)
+
+3. **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)**
+   - Instruções passo a passo
+   - Diferentes cenários de migração
+   - Troubleshooting
 
 ---
 
-## 💾 SQL Script
+## 📋 Como aplicar (Método Rápido)
+1. Acesse o seu [Dashboard do Supabase](https://app.supabase.com/).
+2. Vá em **SQL Editor** no menu lateral.
+3. Clique em **New Query**.
+4. Cole o conteúdo de **MIGRATION_INIT.sql** e clique em **Run**.
+
+---
+
+## 💾 SQL Script (Histórico v1.0)
 
 ```sql
 -- ==========================================
@@ -81,6 +103,16 @@ CREATE INDEX IF NOT EXISTS idx_agendamentos_profissional ON agendamentos(profiss
 
 ---
 
+## 🔄 Versões do Schema
+
+| Versão | Status | Data | Notas |
+|--------|--------|------|-------|
+| 1.0 | ✅ Histórico | 2026-04-03 | Profissionais + Agendamentos (DATABASE_SETUP.md) |
+| 1.1 | ✅ Histórico | 2026-04-03 | Adição de tabela servicos (create_servicos_table.sql) |
+| 1.2 | ✅ **ATUAL** | 2026-04-03 | Schema completo com todos os índices (MIGRATION_INIT.sql) |
+
+---
+
 ## 🔒 Notas de Segurança Sênior
 
 > [!IMPORTANT]
@@ -88,5 +120,16 @@ CREATE INDEX IF NOT EXISTS idx_agendamentos_profissional ON agendamentos(profiss
 
 > [!TIP]
 > Garanta que seu arquivo `.env` contenha as chaves corretas:
-> `VITE_SUPABASE_URL=sua_url`
-> `VITE_SUPABASE_ANON_KEY=sua_chave`
+> ```
+> VITE_SUPABASE_URL=sua_url
+> VITE_SUPABASE_ANON_KEY=sua_chave
+> ```
+
+---
+
+## 📖 Referência de Documentação
+
+- **Schema Atual:** Veja [CLASSES.md](CLASSES.md)
+- **Instruções de Migração:** Veja [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)
+- **Script Completo:** Veja [MIGRATION_INIT.sql](MIGRATION_INIT.sql)
+

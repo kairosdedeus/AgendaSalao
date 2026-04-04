@@ -1,0 +1,309 @@
+{
+  "project": {
+    "name": "Agenda.Ouro",
+    "description": "Sistema de agendamento para salão de beleza",
+    "database": "Supabase PostgreSQL",
+    "version": "1.2",
+    "lastUpdated": "2026-04-03",
+    "author": "Dev Team (Senior Backend)"
+  },
+  "schema": {
+    "version": "1.2",
+    "tables": [
+      {
+        "name": "profissionais",
+        "description": "Profissionais/especialistas do salão",
+        "version": "1.0",
+        "fields": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "primaryKey": true,
+            "default": "gen_random_uuid()"
+          },
+          {
+            "name": "nome",
+            "type": "TEXT",
+            "nullable": false
+          },
+          {
+            "name": "foto_url",
+            "type": "TEXT",
+            "nullable": true
+          },
+          {
+            "name": "created_at",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "nullable": false,
+            "default": "timezone('utc'::text, now())"
+          }
+        ],
+        "indexes": [
+          "idx_profissionais_nome"
+        ],
+        "seedData": [
+          { "nome": "Helena Costa", "foto_url": null },
+          { "nome": "Juliana Paiva", "foto_url": null },
+          { "nome": "Beatriz Lima", "foto_url": null }
+        ],
+        "seedCount": 3,
+        "rls": {
+          "enabled": true,
+          "policies": [
+            {
+              "name": "Profissionais são visíveis publicamente",
+              "command": "SELECT",
+              "role": "public",
+              "allowed": true
+            },
+            {
+              "name": "Gestores podem gerenciar profissionais",
+              "command": "ALL",
+              "role": "authenticated",
+              "allowed": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "servicos",
+        "description": "Catálogo de serviços oferecidos pelo salão",
+        "version": "1.1",
+        "fields": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "primaryKey": true,
+            "default": "gen_random_uuid()"
+          },
+          {
+            "name": "descricao",
+            "type": "TEXT",
+            "nullable": false
+          },
+          {
+            "name": "categoria",
+            "type": "TEXT",
+            "nullable": false
+          },
+          {
+            "name": "preco",
+            "type": "DECIMAL(10,2)",
+            "nullable": false
+          },
+          {
+            "name": "created_at",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "nullable": false,
+            "default": "timezone('utc'::text, now())"
+          }
+        ],
+        "indexes": [
+          "idx_servicos_categoria",
+          "idx_servicos_preco"
+        ],
+        "seedData": [
+          { "descricao": "Corte Masculino", "categoria": "Corte", "preco": 50.00 },
+          { "descricao": "Corte Feminino", "categoria": "Corte", "preco": 80.00 },
+          { "descricao": "Escova", "categoria": "Finalização", "preco": 60.00 },
+          { "descricao": "Progressiva", "categoria": "Tratamento", "preco": 250.00 },
+          { "descricao": "Manicure", "categoria": "Unhas", "preco": 40.00 },
+          { "descricao": "Pedicure", "categoria": "Unhas", "preco": 45.00 },
+          { "descricao": "Coloração", "categoria": "Cor", "preco": 150.00 },
+          { "descricao": "Luzes", "categoria": "Cor", "preco": 350.00 },
+          { "descricao": "Hidratação", "categoria": "Tratamento", "preco": 120.00 }
+        ],
+        "seedCount": 9,
+        "rls": {
+          "enabled": true,
+          "policies": [
+            {
+              "name": "Serviços são visíveis publicamente",
+              "command": "SELECT",
+              "role": "public",
+              "allowed": true
+            },
+            {
+              "name": "Gestores podem gerenciar serviços",
+              "command": "ALL",
+              "role": "authenticated",
+              "allowed": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "agendamentos",
+        "description": "Registro de agendamentos/compromissos dos clientes",
+        "version": "1.2",
+        "fields": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "primaryKey": true,
+            "default": "gen_random_uuid()"
+          },
+          {
+            "name": "created_at",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "nullable": false,
+            "default": "timezone('utc'::text, now())"
+          },
+          {
+            "name": "data_hora",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "nullable": false
+          },
+          {
+            "name": "cliente_nome",
+            "type": "TEXT",
+            "nullable": false
+          },
+          {
+            "name": "cliente_telefone",
+            "type": "TEXT",
+            "nullable": true
+          },
+          {
+            "name": "servico",
+            "type": "TEXT",
+            "nullable": false
+          },
+          {
+            "name": "servico_id",
+            "type": "UUID",
+            "nullable": true,
+            "foreignKey": "servicos(id)",
+            "onDelete": "SET NULL"
+          },
+          {
+            "name": "profissional_id",
+            "type": "UUID",
+            "nullable": false,
+            "foreignKey": "profissionais(id)",
+            "onDelete": "CASCADE"
+          },
+          {
+            "name": "observacoes",
+            "type": "TEXT",
+            "nullable": true
+          },
+          {
+            "name": "status",
+            "type": "TEXT",
+            "nullable": false,
+            "default": "Confirmado",
+            "check": "status IN ('Pendente', 'Confirmado', 'Cancelado', 'Finalizado')"
+          }
+        ],
+        "indexes": [
+          "idx_agendamentos_data_hora",
+          "idx_agendamentos_profissional_id",
+          "idx_agendamentos_servico_id",
+          "idx_agendamentos_status",
+          "idx_agendamentos_cliente_nome"
+        ],
+        "seedCount": 0,
+        "rls": {
+          "enabled": true,
+          "policies": [
+            {
+              "name": "Agendamentos são visíveis publicamente",
+              "command": "SELECT",
+              "role": "public",
+              "allowed": true
+            },
+            {
+              "name": "Clientes podem criar agendamentos",
+              "command": "INSERT",
+              "role": "public",
+              "allowed": true
+            },
+            {
+              "name": "Gestores podem editar agendamentos",
+              "command": "UPDATE",
+              "role": "authenticated",
+              "allowed": true
+            },
+            {
+              "name": "Gestores podem deletar agendamentos",
+              "command": "DELETE",
+              "role": "authenticated",
+              "allowed": true
+            }
+          ]
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "from": "agendamentos",
+        "to": "profissionais",
+        "type": "N:1",
+        "foreignKey": "profissional_id",
+        "onDelete": "CASCADE"
+      },
+      {
+        "from": "agendamentos",
+        "to": "servicos",
+        "type": "N:1",
+        "foreignKey": "servico_id",
+        "onDelete": "SET NULL"
+      }
+    ]
+  },
+  "migration": {
+    "files": [
+      {
+        "name": "MIGRATION_INIT.sql",
+        "type": "SQL",
+        "priority": "HIGH",
+        "description": "Script completo de migração (RECOMENDADO)",
+        "lines": 250
+      },
+      {
+        "name": "CLASSES.md",
+        "type": "Markdown",
+        "priority": "HIGH",
+        "description": "Documentação de todas as tabelas",
+        "lines": 200
+      },
+      {
+        "name": "MIGRATION_GUIDE.md",
+        "type": "Markdown",
+        "priority": "HIGH",
+        "description": "Instruções de migração passo a passo",
+        "lines": 300
+      },
+      {
+        "name": "DATABASE_SETUP.md",
+        "type": "Markdown",
+        "priority": "LOW",
+        "description": "Referência histórica (v1.0)",
+        "lines": 100
+      }
+    ]
+  },
+  "statistics": {
+    "totalTables": 3,
+    "totalIndexes": 9,
+    "totalPolicies": 7,
+    "totalSeedRecords": 12,
+    "totalFields": 28,
+    "foreignKeys": 2
+  },
+  "security": {
+    "rlsEnabled": true,
+    "checkConstraints": 1,
+    "cascadeDeleteRules": 1,
+    "nullableFields": 7
+  },
+  "performance": {
+    "indexedFields": 9,
+    "criticalIndexes": [
+      "idx_agendamentos_data_hora",
+      "idx_agendamentos_profissional_id",
+      "idx_servicos_categoria"
+    ]
+  }
+}

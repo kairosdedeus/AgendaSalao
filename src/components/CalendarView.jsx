@@ -124,7 +124,8 @@ const CalendarView = ({ selectedDate, onDateSelect, professionalId }) => {
               relative h-14 flex items-center justify-center cursor-pointer transition-all duration-300
               ${!isCurrentMonth ? 'text-gray-200' : ''}
               ${isPast ? 'cursor-not-allowed opacity-30 text-gray-400' : 'hover:bg-lavender-50 rounded-2xl'}
-              ${isSelected ? 'bg-lavender-600 text-white shadow-xl shadow-lavender-200 z-10' : ''}
+              ${isSelected ? 'bg-lavender-600 text-white shadow-xl shadow-lavender-200 z-10 rounded-2xl' : ''}
+              ${!isPast && hasAppointment && !isSelected ? 'ring-2 ring-lavender-400 ring-opacity-50 rounded-2xl' : ''}
             `}
             onClick={() => !isPast && onDateSelect(d)}
           >
@@ -139,10 +140,17 @@ const CalendarView = ({ selectedDate, onDateSelect, professionalId }) => {
               {format(d, 'd')}
             </span>
             {!isPast && hasAppointment && (
-              <div className={`
-                absolute bottom-2 w-1 h-1 rounded-full z-20
-                ${isSelected ? 'bg-white' : 'bg-lavender-400'}
-              `} />
+              <div className="absolute -bottom-1 flex gap-0.5 z-20">
+                <div className={`
+                  w-2 h-2 rounded-full
+                  ${isSelected ? 'bg-white' : 'bg-lavender-500'}
+                  shadow-sm
+                `} />
+                <div className={`
+                  w-2 h-2 rounded-full
+                  ${isSelected ? 'bg-white opacity-60' : 'bg-lavender-400 opacity-60'}
+                `} />
+              </div>
             )}
             {isSameDay(d, today) && !isSelected && (
               <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-400 rounded-full z-20 shadow-sm" />

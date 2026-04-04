@@ -51,7 +51,7 @@ const Login = () => {
               <Sparkles className="w-10 h-10 text-white" />
             </motion.div>
             <h1 className="text-4xl font-black text-gray-900 font-display tracking-tight mb-2">
-              Agenda<span className="text-lavender-600">.</span>Ouro
+              Agenda<span className="text-lavender-600">.</span>Studio
             </h1>
             <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.3em]">Premium Management</p>
           </div>

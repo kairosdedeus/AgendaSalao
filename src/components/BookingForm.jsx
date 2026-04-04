@@ -9,21 +9,6 @@ import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // ---------------------------------------------------------------------------
-// Catálogo de serviços (estático — pode ser externalizado para tabela futura)
-// ---------------------------------------------------------------------------
-const SERVICES = [
-  { id: '1', name: 'Corte Masculino', category: 'Corte', price: 'R$ 50', icon: <Scissors className="w-5 h-5" /> },
-  { id: '2', name: 'Corte Feminino', category: 'Corte', price: 'R$ 80', icon: <Scissors className="w-5 h-5" /> },
-  { id: '3', name: 'Escova', category: 'Finalização', price: 'R$ 60', icon: <Sparkles className="w-5 h-5" /> },
-  { id: '4', name: 'Progressiva', category: 'Tratamento', price: 'R$ 250', icon: <Zap className="w-5 h-5" /> },
-  { id: '5', name: 'Manicure', category: 'Unhas', price: 'R$ 40', icon: <Star className="w-5 h-5" /> },
-  { id: '6', name: 'Pedicure', category: 'Unhas', price: 'R$ 45', icon: <Star className="w-5 h-5" /> },
-  { id: '7', name: 'Coloração', category: 'Cor', price: 'R$ 150', icon: <Sparkles className="w-5 h-5" /> },
-  { id: '8', name: 'Luzes', category: 'Cor', price: 'R$ 350', icon: <Sparkles className="w-5 h-5" /> },
-  { id: '9', name: 'Hidratação', category: 'Tratamento', price: 'R$ 120', icon: <Zap className="w-5 h-5" /> },
-];
-
-// ---------------------------------------------------------------------------
 // BookingForm — wizard de 3 passos para criar ou editar um agendamento
 // ---------------------------------------------------------------------------
 const BookingForm = ({ selectedDate, professionalId, onClose, onSave, initialData = null }) => {
@@ -33,16 +18,50 @@ const BookingForm = ({ selectedDate, professionalId, onClose, onSave, initialDat
   const [availableSlots, setAvailableSlots] = useState([]);
   const [success, setSuccess] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [services, setServices] = useState([]);
+  const [servicesLoading, setServicesLoading] = useState(true);
 
   const [formData, setFormData] = useState({
     cliente_nome: initialData?.cliente_nome || '',
     cliente_telefone: initialData?.cliente_telefone || '',
-    servico: initialData?.servico || SERVICES[0].name,
+    servico: initialData?.servico || '',
+    servico_id: initialData?.servico_id || '',
     data_hora: initialData?.data_hora || '',
     observacoes: initialData?.observacoes || '',
   });
 
   const isEditing = !!initialData;
+
+  // Buscar serviços do banco
+  useEffect(() => {
+    const fetchServices = async () => {
+      setServicesLoading(true);
+      const { data, error } = await supabase
+        .from('servicos')
+        .select('*')
+        .order('categoria');
+
+      if (error) {
+        console.error('Erro ao buscar serviços:', error);
+        setServicesLoading(false);
+        return;
+      }
+
+      setServices(data || []);
+      setServicesLoading(false);
+
+      // Definir serviço padrão se não estiver editando
+      if (!isEditing && data && data.length > 0) {
+        setFormData(prev => ({ 
+          ...prev, 
+          servico: data[0].descricao,
+          servico_id: data[0].id
+        }));
+      }
+    };
+
+    fetchServices();
+  }, [isEditing]);
 
   // ---------------------------------------------------------------------------
   // Busca horários ocupados no banco e gera slots disponíveis
@@ -111,6 +130,7 @@ const BookingForm = ({ selectedDate, professionalId, onClose, onSave, initialDat
       cliente_nome: formData.cliente_nome,
       cliente_telefone: formData.cliente_telefone,
       servico: formData.servico,
+      servico_id: formData.servico_id,
       profissional_id: professionalId,
       observacoes: formData.observacoes,
     };
@@ -134,35 +154,64 @@ const BookingForm = ({ selectedDate, professionalId, onClose, onSave, initialDat
     setTimeout(() => onSave(), 1800);
   };
 
+  // Função para obter ícone baseado na categoria
+  const getServiceIcon = (categoria) => {
+    switch (categoria.toLowerCase()) {
+      case 'corte': return <Scissors className="w-5 h-5" />;
+      case 'finalização': return <Sparkles className="w-5 h-5" />;
+      case 'tratamento': return <Zap className="w-5 h-5" />;
+      case 'unhas': return <Star className="w-5 h-5" />;
+      case 'cor': return <Sparkles className="w-5 h-5" />;
+      default: return <Sparkles className="w-5 h-5" />;
+    }
+  };
+
   // ---------------------------------------------------------------------------
   // Steps
   // ---------------------------------------------------------------------------
   const renderStep1 = () => (
     <motion.div key="s1" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-3">
-      {SERVICES.map((s) => (
-        <button
-          key={s.id}
-          onClick={() => { setFormData(f => ({ ...f, servico: s.name })); setStep(2); }}
-          className={`
-            w-full p-4 rounded-3xl border-2 transition-all flex items-center justify-between group
-            ${formData.servico === s.name ? 'border-lavender-600 bg-lavender-50' : 'border-gray-100 hover:border-lavender-200 bg-white'}
-          `}
-        >
-          <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-2xl transition-colors ${formData.servico === s.name ? 'bg-lavender-600 text-white' : 'bg-gray-50 text-gray-400 group-hover:bg-lavender-100'}`}>
-              {s.icon}
+      {servicesLoading ? (
+        <div className="flex justify-center py-12">
+          <div className="w-8 h-8 border-4 border-lavender-200 border-t-lavender-600 rounded-full animate-spin" />
+        </div>
+      ) : services.length === 0 ? (
+        <div className="text-center py-10 text-gray-400 font-bold">
+          Nenhum serviço disponível.
+        </div>
+      ) : (
+        services.map((s) => (
+          <button
+            key={s.id}
+            onClick={() => { 
+              setFormData(f => ({ 
+                ...f, 
+                servico: s.descricao,
+                servico_id: s.id
+              })); 
+              setStep(2); 
+            }}
+            className={`
+              w-full p-4 rounded-3xl border-2 transition-all flex items-center justify-between group
+              ${formData.servico === s.descricao ? 'border-lavender-600 bg-lavender-50' : 'border-gray-100 hover:border-lavender-200 bg-white'}
+            `}
+          >
+            <div className="flex items-center gap-4">
+              <div className={`p-3 rounded-2xl transition-colors ${formData.servico === s.descricao ? 'bg-lavender-600 text-white' : 'bg-gray-50 text-gray-400 group-hover:bg-lavender-100'}`}>
+                {getServiceIcon(s.categoria)}
+              </div>
+              <div className="text-left">
+                <p className="text-[10px] font-black uppercase tracking-widest text-lavender-400 mb-0.5">{s.categoria}</p>
+                <p className="font-bold text-gray-800">{s.descricao}</p>
+              </div>
             </div>
-            <div className="text-left">
-              <p className="text-[10px] font-black uppercase tracking-widest text-lavender-400 mb-0.5">{s.category}</p>
-              <p className="font-bold text-gray-800">{s.name}</p>
+            <div className="text-right">
+              <p className="font-black text-lavender-600">R$ {s.preco.toFixed(2)}</p>
+              <ChevronRight className="w-4 h-4 text-gray-300 ml-auto" />
             </div>
-          </div>
-          <div className="text-right">
-            <p className="font-black text-lavender-600">{s.price}</p>
-            <ChevronRight className="w-4 h-4 text-gray-300 ml-auto" />
-          </div>
-        </button>
-      ))}
+          </button>
+        ))
+      )}
     </motion.div>
   );
 

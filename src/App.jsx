@@ -4,10 +4,11 @@ import CalendarView from './components/CalendarView';
 import TimeSlotList from './components/TimeSlotList';
 import BookingForm from './components/BookingForm';
 import AppointmentsManager from './components/AppointmentsManager';
+import AdminDashboard from './components/AdminDashboard';
 import {
   Users, LogOut, Sparkles,
   ChevronDown, AlertCircle, Calendar as CalendarIcon,
-  ClipboardList, Loader2
+  ClipboardList, Loader2, Settings
 } from 'lucide-react';
 import Login from './components/Login';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -55,15 +56,24 @@ const MainApp = ({ onLogout }) => {
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const fetchProfessionals = async () => {
       setLoading(true);
       setError(null);
 
+      // Verificar se usuário é admin
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Simplificar: considerar admin se email contém "admin" ou é específico
+        setIsAdmin(user.email?.includes('admin') || user.email === 'admin@agendaouro.com');
+      }
+
       const { data, error: err } = await supabase
         .from('profissionais')
-        .select('id, nome')
+        .select('id, nome, foto_url')
         .order('nome');
 
       if (err) {
@@ -152,12 +162,23 @@ const MainApp = ({ onLogout }) => {
               Agenda<span className="text-lavender-600">.</span>Ouro
             </h1>
           </div>
-          <button
-            onClick={onLogout}
-            className="w-12 h-12 glass flex items-center justify-center text-gray-400 hover:text-red-500 rounded-2xl transition-all active:scale-90"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <button
+                onClick={() => setShowAdminDashboard(true)}
+                className="w-12 h-12 glass flex items-center justify-center text-gray-400 hover:text-lavender-600 rounded-2xl transition-all active:scale-90"
+                title="Dashboard Administrativo"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+            )}
+            <button
+              onClick={onLogout}
+              className="w-12 h-12 glass flex items-center justify-center text-gray-400 hover:text-red-500 rounded-2xl transition-all active:scale-90"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Seletor de profissional — só visível na aba calendário */}
@@ -167,21 +188,49 @@ const MainApp = ({ onLogout }) => {
             animate={{ opacity: 1, y: 0 }}
             className="glass p-6 rounded-[2.5rem] border-lavender-100"
           >
-            <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 mb-3 uppercase tracking-[0.2em]">
-              <Users className="w-3.5 h-3.5" />
-              Especialista Responsável
-            </div>
-            <div className="relative">
-              <select
-                className="w-full p-5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-lavender-500 outline-none text-gray-900 font-black appearance-none pr-12 transition-all cursor-pointer"
-                value={selectedProfessionalId}
-                onChange={(e) => setSelectedProfessionalId(e.target.value)}
-              >
-                {professionals.map((p) => (
-                  <option key={p.id} value={p.id}>{p.nome}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+                  <Users className="w-3.5 h-3.5" />
+                  Especialista Responsável
+                </div>
+                <div className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+                  Toque para mudar
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {professionals.map((p) => {
+                  const initials = p.nome.split(' ').slice(0, 2).map((part) => part[0]).join('');
+                  const isSelected = selectedProfessionalId === p.id;
+
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => setSelectedProfessionalId(p.id)}
+                      className={`w-full text-left rounded-[2rem] border p-4 transition-all flex items-center gap-4 ${isSelected ? 'border-lavender-600 bg-lavender-50 shadow-xl' : 'border-gray-100 bg-white hover:border-lavender-200 hover:bg-gray-50'}`}
+                    >
+                      <div className={`flex h-14 w-14 items-center justify-center rounded-3xl text-lg font-black ${isSelected ? 'bg-lavender-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                        {p.foto_url ? (
+                          <img
+                            src={p.foto_url}
+                            alt={p.nome}
+                            className="h-14 w-14 rounded-3xl object-cover"
+                          />
+                        ) : (
+                          initials
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-bold text-gray-900">{p.nome}</p>
+                        <p className={`text-sm uppercase tracking-[0.14em] ${isSelected ? 'text-lavender-600' : 'text-gray-400'}`}>
+                          {isSelected ? 'Selecionado' : 'Clique para escolher'}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </motion.div>
         )}
@@ -250,6 +299,13 @@ const MainApp = ({ onLogout }) => {
             onClose={() => { setShowBookingForm(false); setEditingAppointment(null); }}
             onSave={handleSave}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Admin Dashboard Modal */}
+      <AnimatePresence>
+        {showAdminDashboard && (
+          <AdminDashboard onClose={() => setShowAdminDashboard(false)} />
         )}
       </AnimatePresence>
     </div>
