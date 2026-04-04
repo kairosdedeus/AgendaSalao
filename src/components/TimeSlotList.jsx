@@ -9,51 +9,47 @@ import { ptBR } from 'date-fns/locale';
 import { Plus, User, Scissors, Loader2, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useRealtimeAppointments } from '../hooks/useRealtime';
 
 const TimeSlotList = ({ selectedDate, professionalId, onAddBooking }) => {
   const [dayAppointments, setDayAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Usar hook de real-time para agendamentos
-  const { appointments: allAppointments, loading: realtimeLoading } = useRealtimeAppointments();
-
   useEffect(() => {
-    if (!selectedDate || !professionalId) {
-      setDayAppointments([]);
-      return;
-    }
+    const fetchDayAppointments = async () => {
+      if (!selectedDate || !professionalId) return;
+      
+      setLoading(true);
+      try {
+        const start = startOfDay(selectedDate);
+        const end = endOfDay(selectedDate);
 
-    // Filtrar agendamentos do dia selecionado
-    const start = startOfDay(selectedDate);
-    const end = endOfDay(selectedDate);
+        const { data, error } = await supabase
+          .from('agendamentos')
+          .select('*')
+          .eq('profissional_id', professionalId)
+          .gte('data_hora', start.toISOString())
+          .lte('data_hora', end.toISOString())
+          .order('data_hora', { ascending: true });
 
-    const filtered = (allAppointments || []).filter(appointment => {
-      // Filtrar por profissional se especificado
-      if (professionalId && appointment.profissional_id !== professionalId) {
-        return false;
+        if (error) {
+          console.error('TimeSlotList: falha ao buscar agenda do dia:', error.message);
+          setDayAppointments([]);
+          setLoading(false);
+          return;
+        }
+        setDayAppointments(data || []);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      const appointmentDate = new Date(appointment.data_hora);
-      return appointmentDate >= start && appointmentDate <= end;
-    });
-
-    setDayAppointments(filtered);
-    setLoading(false);
-  }, [selectedDate, professionalId, allAppointments]);
-
-  // Mostrar loading apenas na primeira carga
-  const isLoading = loading || (realtimeLoading && dayAppointments.length === 0);
+    fetchDayAppointments();
+  }, [selectedDate, professionalId]);
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-20">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-        >
-          <Loader2 className="w-10 h-10 text-lavender-600" />
-        </motion.div>
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="w-6 h-6 animate-spin text-lavender-500" />
       </div>
     );
   }

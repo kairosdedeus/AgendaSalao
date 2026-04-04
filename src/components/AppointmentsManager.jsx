@@ -7,18 +7,53 @@ import {
   Scissors, AlertCircle, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useRealtimeAppointments } from '../hooks/useRealtime';
 
 const AppointmentsManager = ({ onEdit }) => {
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('upcoming'); // 'upcoming' | 'all'
   const [deletingId, setDeletingId] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // Usar hook de real-time para agendamentos
-  const { appointments: allAppointments, loading, error, refetch } = useRealtimeAppointments({
-    upcomingOnly: filter === 'upcoming'
-  });
+  useEffect(() => {
+    fetchAppointments();
+  }, [filter]);
+
+  const fetchAppointments = async () => {
+    setLoading(true);
+    setError(null);
+
+    let query = supabase
+      .from('agendamentos')
+      .select(`
+        id,
+        data_hora,
+        cliente_nome,
+        cliente_telefone,
+        servico,
+        observacoes,
+        status,
+        profissionais ( nome )
+      `)
+      .order('data_hora', { ascending: true });
+
+    if (filter === 'upcoming') {
+      query = query.gte('data_hora', startOfToday().toISOString());
+    }
+
+    const { data, error: err } = await query;
+
+    if (err) {
+      setError('Não foi possível carregar os agendamentos.');
+      setLoading(false);
+      return;
+    }
+
+    setAppointments(data || []);
+    setLoading(false);
+  };
 
   const handleDelete = async (id) => {
     setDeleteLoading(true);
@@ -29,17 +64,17 @@ const AppointmentsManager = ({ onEdit }) => {
       .eq('id', id);
 
     if (err) {
+      // Exibe o erro brevemente e fecha o overlay
       console.error('Erro ao excluir:', err.message);
     } else {
-      // Os dados serão atualizados automaticamente via real-time
-      console.log('Agendamento excluído com sucesso');
+      setAppointments(prev => prev.filter(a => a.id !== id));
     }
 
     setDeletingId(null);
     setDeleteLoading(false);
   };
 
-  const filtered = (allAppointments || []).filter(a =>
+  const filtered = appointments.filter(a =>
     a.cliente_nome.toLowerCase().includes(search.toLowerCase()) ||
     a.servico.toLowerCase().includes(search.toLowerCase())
   );

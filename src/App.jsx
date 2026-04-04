@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import Login from './components/Login';
 import { motion, AnimatePresence } from 'framer-motion';
+import { APP_TITLE_PREFIX, APP_TITLE_SUFFIX } from './constants';
 
 // ---------------------------------------------------------------------------
 // ErrorBoundary — captura erros inesperados sem quebrar toda a aplicação
@@ -159,7 +160,9 @@ const MainApp = ({ onLogout }) => {
               <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Premium Management</div>
             </div>
             <h1 className="text-4xl font-black text-gray-900 font-display leading-none tracking-tight">
-              Agenda<span className="text-lavender-600">.</span>Ouro
+              {APP_TITLE_PREFIX}
+              <span className="text-lavender-600">.</span>
+              {APP_TITLE_SUFFIX}
             </h1>
           </div>
           <div className="flex items-center gap-2">

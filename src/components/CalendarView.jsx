@@ -18,65 +18,65 @@ import { ptBR } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useRealtimeAppointments } from '../hooks/useRealtime';
 
 const CalendarView = ({ selectedDate, onDateSelect, professionalId }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-
-  // Usar hook de real-time para agendamentos
-  const { appointments: allAppointments } = useRealtimeAppointments();
-
-  // Filtrar agendamentos do mês atual para marcadores
   const [appointments, setAppointments] = useState([]);
 
   useEffect(() => {
-    if (!professionalId) {
-      setAppointments([]);
-      return;
-    }
+    const fetchAppointments = async () => {
+      if (!professionalId) return;
 
-    const firstDay = startOfMonth(currentMonth);
-    const lastDay = endOfMonth(currentMonth);
+      try {
+        const firstDay = startOfMonth(currentMonth);
+        const lastDay = endOfMonth(currentMonth);
 
-    const filtered = (allAppointments || []).filter(appointment => {
-      // Filtrar por profissional se especificado
-      if (professionalId && appointment.profissional_id !== professionalId) {
-        return false;
+        const { data, error } = await supabase
+          .from('agendamentos')
+          .select('data_hora')
+          .eq('profissional_id', professionalId)
+          .gte('data_hora', firstDay.toISOString())
+          .lte('data_hora', lastDay.toISOString());
+
+        if (error) {
+          console.error('CalendarView: falha ao buscar marcadores:', error.message);
+          setAppointments([]);
+          return;
+        }
+        setAppointments(data || []);
+      } catch (err) {
+        console.error('CalendarView: erro inesperado:', err.message);
+        setAppointments([]);
       }
+    };
 
-      const appointmentDate = new Date(appointment.data_hora);
-      return appointmentDate >= firstDay && appointmentDate <= lastDay;
-    });
+    fetchAppointments();
+  }, [currentMonth, professionalId]);
 
-    setAppointments(filtered);
-  }, [currentMonth, professionalId, allAppointments]);
-
-  const renderHeader = () => {
-    return (
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8 gap-4">
-        <div className="flex flex-col">
-          <span className="text-gray-400 text-[8px] sm:text-xs font-black uppercase tracking-widest mb-1 ml-1 opacity-50">Calendário</span>
-          <h2 className="text-lg sm:text-xl md:text-2xl font-black text-gray-900 font-display capitalize">
-            {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
-          </h2>
-        </div>
-        <div className="flex gap-2 self-start sm:self-auto">
-          <button 
-            onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-            className="p-2 sm:p-3 hover:bg-white hover:shadow-xl rounded-lg sm:rounded-2xl transition-all active:scale-90 border border-transparent hover:border-gray-100 group"
-          >
-            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400 group-hover:text-lavender-600 transition-colors" />
-          </button>
-          <button 
-            onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-            className="p-2 sm:p-3 hover:bg-white hover:shadow-xl rounded-lg sm:rounded-2xl transition-all active:scale-90 border border-transparent hover:border-gray-100 group"
-          >
-            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400 group-hover:text-lavender-600 transition-colors" />
-          </button>
-        </div>
+  const renderHeader = () => (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      <div>
+        <h2 className="text-lg sm:text-xl md:text-2xl font-black text-gray-900 font-display">{format(currentMonth, "MMMM yyyy", { locale: ptBR })}</h2>
+        <p className="text-xs sm:text-sm text-gray-500">Selecione a data desejada</p>
       </div>
-    );
-  };
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+          className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+          className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
 
   const renderDays = () => {
     const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];

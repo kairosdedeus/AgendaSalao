@@ -5,10 +5,12 @@ import {
   X, Check, AlertCircle, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useRealtimeServices, useRealtimeProfessionals } from '../hooks/useRealtime';
 
 const AdminDashboard = ({ onClose }) => {
   const [activeTab, setActiveTab] = useState('services');
+  const [services, setServices] = useState([]);
+  const [professionals, setProfessionals] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [editingService, setEditingService] = useState(null);
   const [editingProfessional, setEditingProfessional] = useState(null);
   const [showAddService, setShowAddService] = useState(false);
@@ -26,11 +28,29 @@ const AdminDashboard = ({ onClose }) => {
     foto_url: ''
   });
 
-  // Usar hooks de real-time
-  const { services, loading: servicesLoading, refetch: refetchServices } = useRealtimeServices();
-  const { professionals, loading: professionalsLoading, refetch: refetchProfessionals } = useRealtimeProfessionals();
+  // Load data
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const [servicesRes, professionalsRes] = await Promise.all([
+          supabase.from('servicos').select('*').order('categoria'),
+          supabase.from('profissionais').select('*').order('nome')
+        ]);
 
-  const loading = servicesLoading || professionalsLoading;
+        if (servicesRes.error) throw servicesRes.error;
+        if (professionalsRes.error) throw professionalsRes.error;
+
+        setServices(servicesRes.data || []);
+        setProfessionals(professionalsRes.data || []);
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+      }
+      setLoading(false);
+    };
+
+    loadData();
+  }, []);
 
   // Service CRUD
   const handleAddService = async () => {
@@ -49,7 +69,7 @@ const AdminDashboard = ({ onClose }) => {
 
       setServiceForm({ descricao: '', categoria: '', preco: '' });
       setShowAddService(false);
-      // Dados serão atualizados automaticamente via real-time
+      loadData();
     } catch (error) {
       console.error('Erro ao adicionar serviço:', error);
     }
@@ -72,7 +92,7 @@ const AdminDashboard = ({ onClose }) => {
 
       setEditingService(null);
       setServiceForm({ descricao: '', categoria: '', preco: '' });
-      // Dados serão atualizados automaticamente via real-time
+      loadData();
     } catch (error) {
       console.error('Erro ao editar serviço:', error);
     }
@@ -88,7 +108,7 @@ const AdminDashboard = ({ onClose }) => {
         .eq('id', id);
 
       if (error) throw error;
-      // Dados serão atualizados automaticamente via real-time
+      loadData();
     } catch (error) {
       console.error('Erro ao excluir serviço:', error);
     }
@@ -110,7 +130,7 @@ const AdminDashboard = ({ onClose }) => {
 
       setProfessionalForm({ nome: '', foto_url: '' });
       setShowAddProfessional(false);
-      // Dados serão atualizados automaticamente via real-time
+      loadData();
     } catch (error) {
       console.error('Erro ao adicionar profissional:', error);
     }
@@ -132,7 +152,7 @@ const AdminDashboard = ({ onClose }) => {
 
       setEditingProfessional(null);
       setProfessionalForm({ nome: '', foto_url: '' });
-      // Dados serão atualizados automaticamente via real-time
+      loadData();
     } catch (error) {
       console.error('Erro ao editar profissional:', error);
     }
@@ -148,7 +168,7 @@ const AdminDashboard = ({ onClose }) => {
         .eq('id', id);
 
       if (error) throw error;
-      // Dados serão atualizados automaticamente via real-time
+      loadData();
     } catch (error) {
       console.error('Erro ao excluir profissional:', error);
     }
@@ -198,14 +218,14 @@ const AdminDashboard = ({ onClose }) => {
           {/* Header */}
           <div className="p-4 sm:p-6 border-b border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-              <Settings className="w-6 h-6 text-lavender-600" />
-              <h2 className="text-2xl font-black text-gray-900">Dashboard Administrativo</h2>
+              <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-lavender-600 flex-shrink-0" />
+              <h2 className="text-lg sm:text-xl md:text-2xl font-black text-gray-900 font-display">Dashboard Administrativo</h2>
             </div>
             <button
               onClick={onClose}
-              className="w-10 h-10 rounded-2xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-2xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors flex-shrink-0"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
 
@@ -213,36 +233,36 @@ const AdminDashboard = ({ onClose }) => {
           <div className="flex border-b border-gray-100 overflow-x-auto">
             <button
               onClick={() => setActiveTab('services')}
-              className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 text-center font-bold transition-colors min-w-0 ${
+              className={`flex-1 py-3 sm:py-4 px-2 sm:px-6 text-center font-bold transition-colors min-w-0 ${
                 activeTab === 'services' ? 'text-lavender-600 border-b-2 border-lavender-600' : 'text-gray-400'
               }`}
             >
               <Scissors className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1 flex-shrink-0" />
-              <span className="text-[10px] sm:text-xs hidden sm:block">Serviços</span>
+              <span className="text-[9px] sm:text-[10px] md:text-xs hidden sm:block">Serviços</span>
             </button>
             <button
               onClick={() => setActiveTab('professionals')}
-              className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 text-center font-bold transition-colors min-w-0 ${
+              className={`flex-1 py-3 sm:py-4 px-2 sm:px-6 text-center font-bold transition-colors min-w-0 ${
                 activeTab === 'professionals' ? 'text-lavender-600 border-b-2 border-lavender-600' : 'text-gray-400'
               }`}
             >
               <Users className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1 flex-shrink-0" />
-              <span className="text-[10px] sm:text-xs hidden sm:block">Profissionais</span>
+              <span className="text-[9px] sm:text-[10px] md:text-xs hidden sm:block">Profissionais</span>
             </button>
           </div>
 
           {/* Content */}
-          <div className="p-6 max-h-[60vh] overflow-y-auto">
+          <div className="p-4 sm:p-6 max-h-[60vh] md:max-h-[65vh] overflow-y-auto">
             {activeTab === 'services' && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-gray-900">Gerenciar Serviços</h3>
+              <div className="space-y-4 sm:space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <h3 className="text-lg sm:text-xl font-black text-gray-900 font-display">Gerenciar Serviços</h3>
                   <button
                     onClick={() => setShowAddService(true)}
-                    className="flex items-center gap-2 bg-lavender-600 text-white px-4 py-2 rounded-2xl font-bold hover:bg-lavender-700 transition-colors"
+                    className="flex items-center justify-center gap-2 bg-lavender-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-2xl font-bold hover:bg-lavender-700 transition-colors w-full sm:w-auto"
                   >
-                    <Plus className="w-4 h-4" />
-                    Adicionar
+                    <Plus className="w-4 h-4 flex-shrink-0" />
+                    <span className="hidden sm:inline">Adicionar</span>
                   </button>
                 </div>
 
@@ -256,13 +276,13 @@ const AdminDashboard = ({ onClose }) => {
                       <div className="flex gap-2 self-end sm:self-auto">
                         <button
                           onClick={() => startEditService(service)}
-                          className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center transition-colors"
+                          className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center transition-colors flex-shrink-0"
                         >
                           <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteService(service.id)}
-                          className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 flex items-center justify-center transition-colors"
+                          className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 flex items-center justify-center transition-colors flex-shrink-0"
                         >
                           <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                         </button>
@@ -274,39 +294,39 @@ const AdminDashboard = ({ onClose }) => {
             )}
 
             {activeTab === 'professionals' && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-gray-900">Gerenciar Profissionais</h3>
+              <div className="space-y-4 sm:space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <h3 className="text-lg sm:text-xl font-black text-gray-900 font-display">Gerenciar Profissionais</h3>
                   <button
                     onClick={() => setShowAddProfessional(true)}
-                    className="flex items-center gap-2 bg-lavender-600 text-white px-4 py-2 rounded-2xl font-bold hover:bg-lavender-700 transition-colors"
+                    className="flex items-center justify-center gap-2 bg-lavender-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-2xl font-bold hover:bg-lavender-700 transition-colors w-full sm:w-auto"
                   >
-                    <Plus className="w-4 h-4" />
-                    Adicionar
+                    <Plus className="w-4 h-4 flex-shrink-0" />
+                    <span className="hidden sm:inline">Adicionar</span>
                   </button>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 sm:space-y-3">
                   {professionals.map((professional) => (
-                    <div key={professional.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-                      <div>
-                        <p className="font-bold text-gray-900">{professional.nome}</p>
+                    <div key={professional.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-2xl gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-gray-900 text-sm sm:text-base truncate">{professional.nome}</p>
                         {professional.foto_url && (
-                          <p className="text-sm text-gray-500">Foto: {professional.foto_url}</p>
+                          <p className="text-xs sm:text-sm text-gray-500 truncate">Foto: {professional.foto_url}</p>
                         )}
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 self-end sm:self-auto">
                         <button
                           onClick={() => startEditProfessional(professional)}
-                          className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center transition-colors"
+                          className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center transition-colors flex-shrink-0"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteProfessional(professional.id)}
-                          className="w-8 h-8 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 flex items-center justify-center transition-colors"
+                          className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 flex items-center justify-center transition-colors flex-shrink-0"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                         </button>
                       </div>
                     </div>
@@ -329,23 +349,23 @@ const AdminDashboard = ({ onClose }) => {
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.9, opacity: 0 }}
-                  className="bg-white rounded-3xl p-6 w-full max-w-md"
+                  className="bg-white rounded-lg sm:rounded-2xl md:rounded-3xl p-4 sm:p-6 w-full max-w-xs sm:max-w-sm md:max-w-md mx-4"
                 >
-                  <h3 className="text-xl font-bold mb-4">{editingService ? 'Editar Serviço' : 'Adicionar Serviço'}</h3>
-                  <div className="space-y-4">
+                  <h3 className="text-lg sm:text-xl font-black mb-4 sm:mb-6 font-display">{editingService ? 'Editar Serviço' : 'Adicionar Serviço'}</h3>
+                  <div className="space-y-3 sm:space-y-4">
                     <input
                       type="text"
                       placeholder="Descrição"
                       value={serviceForm.descricao}
                       onChange={(e) => setServiceForm(prev => ({ ...prev, descricao: e.target.value }))}
-                      className="w-full p-3 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-lavender-500 outline-none"
+                      className="w-full p-3 sm:p-4 border border-gray-200 rounded-lg sm:rounded-2xl focus:ring-2 focus:ring-lavender-500 outline-none text-sm sm:text-base"
                     />
                     <input
                       type="text"
                       placeholder="Categoria"
                       value={serviceForm.categoria}
                       onChange={(e) => setServiceForm(prev => ({ ...prev, categoria: e.target.value }))}
-                      className="w-full p-3 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-lavender-500 outline-none"
+                      className="w-full p-3 sm:p-4 border border-gray-200 rounded-lg sm:rounded-2xl focus:ring-2 focus:ring-lavender-500 outline-none text-sm sm:text-base"
                     />
                     <input
                       type="number"
@@ -353,23 +373,23 @@ const AdminDashboard = ({ onClose }) => {
                       placeholder="Preço"
                       value={serviceForm.preco}
                       onChange={(e) => setServiceForm(prev => ({ ...prev, preco: e.target.value }))}
-                      className="w-full p-3 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-lavender-500 outline-none"
+                      className="w-full p-3 sm:p-4 border border-gray-200 rounded-lg sm:rounded-2xl focus:ring-2 focus:ring-lavender-500 outline-none text-sm sm:text-base"
                     />
                   </div>
-                  <div className="flex gap-3 mt-6">
+                  <div className="flex flex-col sm:flex-row gap-3 mt-4 sm:mt-6">
                     <button
                       onClick={() => {
                         setShowAddService(false);
                         setEditingService(null);
                         setServiceForm({ descricao: '', categoria: '', preco: '' });
                       }}
-                      className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-colors"
+                      className="flex-1 py-3 sm:py-4 bg-gray-100 text-gray-600 rounded-lg sm:rounded-2xl font-bold hover:bg-gray-200 transition-colors text-sm sm:text-base"
                     >
                       Cancelar
                     </button>
                     <button
                       onClick={editingService ? handleEditService : handleAddService}
-                      className="flex-1 py-3 bg-lavender-600 text-white rounded-2xl font-bold hover:bg-lavender-700 transition-colors"
+                      className="flex-1 py-3 sm:py-4 bg-lavender-600 text-white rounded-lg sm:rounded-2xl font-bold hover:bg-lavender-700 transition-colors text-sm sm:text-base"
                     >
                       {editingService ? 'Salvar' : 'Adicionar'}
                     </button>
@@ -392,39 +412,39 @@ const AdminDashboard = ({ onClose }) => {
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.9, opacity: 0 }}
-                  className="bg-white rounded-3xl p-6 w-full max-w-md"
+                  className="bg-white rounded-lg sm:rounded-2xl md:rounded-3xl p-4 sm:p-6 w-full max-w-xs sm:max-w-sm md:max-w-md mx-4"
                 >
-                  <h3 className="text-xl font-bold mb-4">{editingProfessional ? 'Editar Profissional' : 'Adicionar Profissional'}</h3>
-                  <div className="space-y-4">
+                  <h3 className="text-lg sm:text-xl font-black mb-4 sm:mb-6 font-display">{editingProfessional ? 'Editar Profissional' : 'Adicionar Profissional'}</h3>
+                  <div className="space-y-3 sm:space-y-4">
                     <input
                       type="text"
                       placeholder="Nome"
                       value={professionalForm.nome}
                       onChange={(e) => setProfessionalForm(prev => ({ ...prev, nome: e.target.value }))}
-                      className="w-full p-3 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-lavender-500 outline-none"
+                      className="w-full p-3 sm:p-4 border border-gray-200 rounded-lg sm:rounded-2xl focus:ring-2 focus:ring-lavender-500 outline-none text-sm sm:text-base"
                     />
                     <input
                       type="url"
                       placeholder="URL da Foto (opcional)"
                       value={professionalForm.foto_url}
                       onChange={(e) => setProfessionalForm(prev => ({ ...prev, foto_url: e.target.value }))}
-                      className="w-full p-3 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-lavender-500 outline-none"
+                      className="w-full p-3 sm:p-4 border border-gray-200 rounded-lg sm:rounded-2xl focus:ring-2 focus:ring-lavender-500 outline-none text-sm sm:text-base"
                     />
                   </div>
-                  <div className="flex gap-3 mt-6">
+                  <div className="flex flex-col sm:flex-row gap-3 mt-4 sm:mt-6">
                     <button
                       onClick={() => {
                         setShowAddProfessional(false);
                         setEditingProfessional(null);
                         setProfessionalForm({ nome: '', foto_url: '' });
                       }}
-                      className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-colors"
+                      className="flex-1 py-3 sm:py-4 bg-gray-100 text-gray-600 rounded-lg sm:rounded-2xl font-bold hover:bg-gray-200 transition-colors text-sm sm:text-base"
                     >
                       Cancelar
                     </button>
                     <button
                       onClick={editingProfessional ? handleEditProfessional : handleAddProfessional}
-                      className="flex-1 py-3 bg-lavender-600 text-white rounded-2xl font-bold hover:bg-lavender-700 transition-colors"
+                      className="flex-1 py-3 sm:py-4 bg-lavender-600 text-white rounded-lg sm:rounded-2xl font-bold hover:bg-lavender-700 transition-colors text-sm sm:text-base"
                     >
                       {editingProfessional ? 'Salvar' : 'Adicionar'}
                     </button>
